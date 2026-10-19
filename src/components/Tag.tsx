@@ -4,7 +4,9 @@ import { useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
  * Heliobond Tag — a selectable filter/category pill. Selected state uses a solar-tint fill paired with an ink label (color never alone).
  */
 export interface TagProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  /** Whether the tag pill is currently selected/active. Defaults to false. */
   selected?: boolean
+  /** Tag text label or content. */
   children: ReactNode
 }
 
@@ -19,7 +21,7 @@ export function Tag({ selected = false, onClick, children, style, ...rest }: Tag
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={
+      style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
@@ -40,7 +42,7 @@ export function Tag({ selected = false, onClick, children, style, ...rest }: Tag
         transition: 'background var(--dur-press) var(--ease-out)',
         whiteSpace: 'nowrap',
         ...style,
-      },
+      }}
       {...rest}
     >
       {children}

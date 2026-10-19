@@ -1,4 +1,5 @@
 import { type CSSProperties, type HTMLAttributes, type ReactNode } from 'react'
+import PropTypes from 'prop-types'
 
 /**
  * Heliobond Badge — a small status marker. Tones derive meaning from an
@@ -7,9 +8,12 @@ import { type CSSProperties, type HTMLAttributes, type ReactNode } from 'react'
  */
 export type BadgeTone = 'neutral' | 'solar' | 'growth' | 'ember' | 'testnet'
 
-export interface BadgeProps extends HTMLAttributes<HSTANSpanElement> {
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  /** Visual theme/color tone of the badge marker. Defaults to 'neutral'. */
   tone?: BadgeTone
+  /** Optional icon node displayed preceding the badge label. */
   icon?: ReactNode
+  /** Badge text label or content. */
   children: ReactNode
 }
 
@@ -35,12 +39,16 @@ export function Badge({ tone = 'neutral', icon = null, children, style, ...rest 
       color: 'var(--ink-strong, #1a1a1a)',
       border: '1px solid var(--ember-strong, #b45309)',
     },
-    testnet: { background: 'var(--solar)', color: 'var(--ink-strong, #1a1a1a)', border: '1px solid transparent' },
+    testnet: {
+      background: 'var(--solar)',
+      color: 'var(--ink-strong, #1a1a1a)',
+      border: '1px solid transparent',
+    },
   }
 
   return (
     <span
-      style={
+      style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: 5,
@@ -55,11 +63,18 @@ export function Badge({ tone = 'neutral', icon = null, children, style, ...rest 
         whiteSpace: 'nowrap',
         ...tones[tone],
         ...style,
-      }
+      }}
       {...rest}
     >
       {icon}
       {children}
     </span>
   )
+}
+
+Badge.propTypes = {
+  tone: PropTypes.oneOf(['neutral', 'solar', 'growth', 'ember', 'testnet']),
+  icon: PropTypes.node,
+  children: PropTypes.node.isRequired,
+  style: PropTypes.object,
 }

@@ -1,12 +1,26 @@
-import { memo, useState, useMemo, type CSSProperties } from 'react'
+import { memo, useMemo, useState, type CSSProperties } from 'react'
 import { useTranslations } from 'next-intl'
-import { Badge, Button, PinIcon, ScoreGauge, ShieldCheckIcon, WatchlistButton, YieldAlertButton } from '../components'
+import {
+  Badge,
+  Button,
+  DemoDataBadge,
+  PinIcon,
+  ScoreGauge,
+  ShieldAlertIcon,
+  ShieldCheckIcon,
+  WatchlistButton,
+  YieldAlertButton,
+  InfoTooltip,
+} from '../components'
 import { Sparkline as SparklineUnmemoized } from '../components/Sparkline'
 const Sparkline = memo(SparklineUnmemoized)
 import { formatMoney } from '../lib/format'
+import { getExplorerUrl } from '../config/network'
+import { shortAddress } from '../wallet/WalletProvider'
 
 import { type Project } from '../data'
 import { type ProjectDetail as ProjectDetailData } from '../data/projectDetails'
+import { type MetadataVerificationStatus } from '../wallet/registry'
 
 /**
  * ProjectDetail — the full story of one project the pool funds. Hero, the
@@ -17,23 +31,47 @@ import { type ProjectDetail as ProjectDetailData } from '../data/projectDetails'
 export interface ProjectDetailProps {
   project: Project
   detail: ProjectDetailData
-  onInvest: () => void
+  verifiedMetadata?: MetadataVerificationStatus
+  onInvest: () => Promise<string>
   onBack?: () => void
+  children?: React.ReactNode
 }
 
-export const ProjectDetail = memo(function ProjectDetail({ project, detail, onInvest, onBack }: ProjectDetailProps) {
+export const ProjectDetail = memo(function ProjectDetail({
+  project,
+  detail,
+  verifiedMetadata = 'unverified',
+  onInvest,
+  onBack,
+  children,
+}: ProjectDetailProps) {
   const t = useTranslations('ProjectDetail')
+  const tc = useTranslations('Common')
   const [investmentUrl, setInvestmentUrl] = useState<string | null>(null)
-  const creditHistory = useMemo(
-    () => detail.scoreHistory.credit.map((p) => p.value),
-    [detail.scoreHistory.credit],
-  )
-  const greenHistory = useMemo(
-    () => detail.scoreHistory.green.map((p) => p.value),
-    [detail.scoreHistory.green],
-  )
+  const sectionTitle: CSSProperties = {
+    fontFamily: 'var(--font-display)',
+    fontWeight: 700,
+    fontSize: 'var(--type-title)',
+    margin: '0 0 16px',
+    color: 'var(--ink)',
+  }
+  const cardStyle: CSSProperties = {
+    background: 'var(--surface)',
+    border: '1px solid var(--ink-12)',
+    borderRadius: 'var(--radius-card)',
+    boxShadow: 'var(--shadow-sm)',
+    padding: '20px',
+  }
+  // Flat selectors — destructure the nested detail ONCE here instead of
+  // drilling five levels (`detail.scoreHistory.credit.map`, `detail.creator.*`)
+  // at every use site.
+  const { name: creatorName, since: creatorSince } = detail.creator
+  const { credit: creditPoints, green: greenPoints } = detail.scoreHistory
+  const creditHistory = useMemo(() => creditPoints.map((p) => p.value), [creditPoints])
+  const greenHistory = useMemo(() => greenPoints.map((p) => p.value), [greenPoints])
   return (
     <main id="main-content" style={{ maxWidth: 860, margin: '0 auto', padding: '40px 24px 96px' }}>
+      <DemoDataBadge style={{ marginBottom: 16 }} />
       {onBack && (
         <button
           type="button"
@@ -81,9 +119,24 @@ export const ProjectDetail = memo(function ProjectDetail({ project, detail, onIn
             gap: 12,
           }}
         >
-          <Badge tone="growth" icon={<ShieldCheckIcon />}>
-            {t('verifiedSince', { since: detail.creator.since })}
-          </Badge>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Badge tone="growth" icon={<ShieldCheckIcon />}>
+              {t('verifiedSince', { since: creatorSince })}
+            </Badge>
+            {verifiedMetadata === 'verified' && (
+              <Badge tone="growth" icon={<ShieldCheckIcon />}>
+                {t('verifiedMetadata')}
+              </Badge>
+            )}
+            {verifiedMetadata === 'mismatch' && (
+              <Badge tone="ember" role="status" icon={<ShieldAlertIcon />}>
+                {t('metadataMismatch')}
+              </Badge>
+            )}
+            {verifiedMetadata === 'unverified' && (
+              <Badge tone="neutral">{t('unverifiedMetadata')}</Badge>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <YieldAlertButton
               bondId={project.id}
@@ -149,7 +202,7 @@ export const ProjectDetail = memo(function ProjectDetail({ project, detail, onIn
             marginBottom: 10,
           }}
         >
-          {t('builtBy')} <b style={{ color: 'var(--ink)' }}>{detail.creator.name}</b>
+          {t('builtBy')} <b style={{ color: 'var(--ink)' }}>{creatorName}</b>
         </div>
         <p
           style={{
@@ -185,6 +238,125 @@ export const ProjectDetail = memo(function ProjectDetail({ project, detail, onIn
             onChainNote={t('onChainNote')}
             verifiedAgo={t('verifiedAgo')}
           />
+        </div>
+      </section>
+
+      {/* Bond pricing history */}
+      <section style={{ marginBottom: 40 }}>
+        <h2 style={sectionTitle}>{t('pricingTitle')}</h2>
+        <div style={cardStyle}>
+          <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+            <div
+              style={{
+                flex: '1 1 240px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Sparkline
+                points={detail.priceHistory.map((p) => p.price)}
+                aria-label={t('priceHistory')}
+              />
+              <span
+                style={{
+                  fontFamily: 'var(--font-data)',
+                  fontSize: 'var(--type-data)',
+                  fontWeight: 600,
+                  color: 'var(--ink)',
+                }}
+              >
+                {detail.priceHistory.length > 0
+                  ? formatMoney(detail.priceHistory[detail.priceHistory.length - 1].price)
+                  : '—'}
+              </span>
+              {detail.priceHistory.length > 1 && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-data)',
+                    fontSize: 'var(--type-fine)',
+                    color: 'var(--ink-40)',
+                  }}
+                >
+                  {detail.priceHistory[detail.priceHistory.length - 1].price >=
+                  detail.priceHistory[0].price
+                    ? '+'
+                    : '-'}
+                  {formatMoney(
+                    Math.abs(
+                      detail.priceHistory[detail.priceHistory.length - 1].price -
+                        detail.priceHistory[0].price,
+                    ),
+                  )}
+                </span>
+              )}
+              <span
+                style={{
+                  fontFamily: 'var(--font-data)',
+                  fontSize: 'var(--type-fine)',
+                  color: 'var(--ink-40)',
+                }}
+              >
+                {t('priceLabel')}
+              </span>
+            </div>
+            <div
+              style={{
+                flex: '1 1 240px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Sparkline
+                points={detail.priceHistory.map((p) => p.yield)}
+                aria-label={t('yieldHistory')}
+              />
+              <span
+                style={{
+                  fontFamily: 'var(--font-data)',
+                  fontSize: 'var(--type-data)',
+                  fontWeight: 600,
+                  color: 'var(--ink)',
+                }}
+              >
+                {detail.priceHistory.length > 0
+                  ? `${detail.priceHistory[detail.priceHistory.length - 1].yield.toFixed(2)}%`
+                  : '—'}
+              </span>
+              {detail.priceHistory.length > 1 && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-data)',
+                    fontSize: 'var(--type-fine)',
+                    color: 'var(--ink-40)',
+                  }}
+                >
+                  {detail.priceHistory[detail.priceHistory.length - 1].yield >=
+                  detail.priceHistory[0].yield
+                    ? '+'
+                    : '-'}
+                  {Math.abs(
+                    detail.priceHistory[detail.priceHistory.length - 1].yield -
+                      detail.priceHistory[0].yield,
+                  ).toFixed(2)}
+                  %
+                </span>
+              )}
+              <span
+                style={{
+                  fontFamily: 'var(--font-data)',
+                  fontSize: 'var(--type-fine)',
+                  color: 'var(--ink-40)',
+                }}
+              >
+                {t('yieldLabel')}
+              </span>
+              <InfoTooltip label={t('yieldHelpLabel')} content={t('yieldHelp')} />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -297,14 +469,23 @@ export const ProjectDetail = memo(function ProjectDetail({ project, detail, onIn
                     marginTop: 2,
                   }}
                 >
-                  <a
-                    href={`https://etherscan.io/tx/${event.hash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ color: 'inherit', textDecoration: 'none' }}
-                  >
-                    {event.hash} ↗
-                  </a>
+                  {(() => {
+                    const explorerUrl = getExplorerUrl(event.hash)
+                    if (!explorerUrl) {
+                      return <span title={event.hash}>{shortAddress(event.hash, 4, 4)}</span>
+                    }
+                    return (
+                      <a
+                        href={explorerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={event.hash}
+                        style={{ color: 'inherit', textDecoration: 'none' }}
+                      >
+                        {shortAddress(event.hash, 4, 4)} ↗
+                      </a>
+                    )
+                  })()}
                 </div>
               </div>
             </div>
@@ -367,11 +548,30 @@ export const ProjectDetail = memo(function ProjectDetail({ project, detail, onIn
         <Button
           variant="primary"
           size="lg"
-          onClick={onInvest}
+          onClick={async () => {
+            const url = await onInvest()
+            setInvestmentUrl(url)
+          }}
           style={{ width: '100%' }}
         >
           {t('investCta')}
         </Button>
+        {investmentUrl && (
+          <a
+            href={investmentUrl}
+            style={{
+              display: 'block',
+              textAlign: 'center',
+              fontFamily: 'var(--font-body)',
+              fontSize: 'var(--type-small)',
+              fontWeight: 600,
+              color: 'var(--brand)',
+              textDecoration: 'none',
+            }}
+          >
+            View investment →
+          </a>
+        )}
         <p
           style={{
             fontFamily: 'var(--font-body)',
@@ -383,6 +583,27 @@ export const ProjectDetail = memo(function ProjectDetail({ project, detail, onIn
         >
           {t('investNote')}
         </p>
+        {investmentUrl && (
+          <div role="status">
+            <a
+              href={investmentUrl}
+              style={{
+                display: 'block',
+                padding: '14px 20px',
+                borderRadius: 'var(--radius-card)',
+                background: 'var(--growth)',
+                color: 'var(--surface)',
+                textAlign: 'center',
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--type-data)',
+                fontWeight: 700,
+                textDecoration: 'none',
+              }}
+            >
+              {tc('viewInvestment')}
+            </a>
+          </div>
+        )}
         {onBack && (
           <div style={{ textAlign: 'center' }}>
             <button
@@ -405,9 +626,12 @@ export const ProjectDetail = memo(function ProjectDetail({ project, detail, onIn
           </div>
         )}
       </section>
+
+      {/* Price history chart */}
+      {children}
     </main>
   )
-});
+})
 
 const ScoreColumn = memo(function ScoreColumn({
   value,
@@ -472,21 +696,4 @@ const ScoreColumn = memo(function ScoreColumn({
       </div>
     </div>
   )
-});
-
-const sectionTitle: CSSProperties = {
-  fontFamily: 'var(--font-display)',
-  fontWeight: 700,
-  fontSize: 'var(--type-h4)',
-  letterSpacing: '-0.01em',
-  color: 'var(--ink)',
-  margin: '0 0 16px',
-}
-
-const cardStyle: CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--ink-12)',
-  borderRadius: 'var(--radius-card)',
-  boxShadow: 'var(--shadow-sm)',
-  padding: '8px 22px',
-}
+})

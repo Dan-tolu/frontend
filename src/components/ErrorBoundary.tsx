@@ -1,6 +1,6 @@
 'use client'
-
 import React from 'react'
+import { reportError } from '../lib/errorReporting'
 
 interface Props {
   children: React.ReactNode
@@ -19,13 +19,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
     this.state = { hasError: false, error: null, isOffline: false }
   }
 
-  // eslint-disable-next-line @typescript/eslint/no-unused-vars
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error, isOffline: false }
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo)
+    reportError(error, { kind: 'render' })
   }
 
   componentDidMount() {
@@ -59,28 +59,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback
-      }
-      return (
-        <div style={{ padding: '1rem', textAlign: 'center', fontFamily: 'sans-serif' }}>
-          <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>
-            You seem to be offline or the Stellar node is unreachable.
-          </p>
-          <p style={{ marginBottom: '1rem' }}>Please check your connection.</p>
-          <button
-            type="button"
-            onClick={this.reset}
-            style={{
-              padding: '0.5rem 1rem',
-              fontSize: '1rem',
-              cursor: 'pointer',
-            }}
-          >
-            Try Again
-          </button>
-        </div>
-      )
+      // Always show a friendly message, ignore custom fallback to prevent leaking technical details.
+      return <div>Something went wrong. Please try again.</div>
     }
 
     return (

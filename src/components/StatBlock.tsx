@@ -1,4 +1,5 @@
 import { type CSSProperties } from 'react'
+import PropTypes from 'prop-types'
 
 /**
  * Heliobond StatBlock — a labeled figure with optional signed delta. Money uses
@@ -8,16 +9,25 @@ import { type CSSProperties } from 'react'
 export type StatBlockSize = 'sm' | 'md' | 'lg'
 
 export interface StatBlockProps {
+  /** The descriptive label displayed above or beside the stat figure. */
   label: string
+  /** The primary numeric or text value to display. */
   value: string
   /** Fractional tail rendered dimmer than the integer part, e.g. ".55". */
   decimals?: string
+  /** Signed change indicator text (e.g. "+$12.50 (+2.4%)"). */
   delta?: string
+  /** Direction for the change arrow indicator ('up' or 'down'). Auto-detected from `delta` if omitted. */
   deltaDirection?: 'up' | 'down'
+  /** Optional unit suffix string displayed beside the value (e.g. "USDC" or "%"). */
   unit?: string
+  /** Typography size rung for the stat block ('sm', 'md', or 'lg'). Defaults to 'md'. */
   size?: StatBlockSize
+  /** Optional URL path to make the entire stat block clickable as a link. */
   href?: string
+  /** Custom inline style overrides. */
   style?: CSSProperties
+  /** Whether to stack label and value vertically on mobile viewports. Defaults to false. */
   stackOnMobile?: boolean
 }
 
@@ -68,7 +78,9 @@ export function StatBlock({
         )}
       </div>
       <div
-        className={stackOnMobile ? 'hb-stat-block-row hb-stat-block-row--stack' : 'hb-stat-block-row'}
+        className={
+          stackOnMobile ? 'hb-stat-block-row hb-stat-block-row--stack' : 'hb-stat-block-row'
+        }
         style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}
       >
         <span
@@ -92,7 +104,11 @@ export function StatBlock({
         </span>
         {delta && (
           <span
-            className={stackOnMobile ? 'hb-stat-block-delta hb-stat-block-delta--stack' : 'hb-stat-block-delta'}
+            className={
+              stackOnMobile
+                ? 'hb-stat-block-delta hb-stat-block-delta--stack'
+                : 'hb-stat-block-delta'
+            }
             style={{
               fontFamily: 'var(--font-data)',
               fontWeight: 'var(--font-weight-semibold)',
@@ -115,4 +131,17 @@ export function StatBlock({
   ) : (
     <div style={wrapperStyle}>{inner}</div>
   )
+}
+
+StatBlock.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  decimals: PropTypes.string,
+  delta: PropTypes.string,
+  deltaDirection: PropTypes.oneOf(['up', 'down']),
+  unit: PropTypes.string,
+  size: PropTypes.oneOf(['sm', 'md', 'lg']),
+  href: PropTypes.string,
+  style: PropTypes.object,
+  stackOnMobile: PropTypes.bool,
 }

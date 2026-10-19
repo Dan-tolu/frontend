@@ -1,8 +1,8 @@
 import { type CSSProperties, type ReactNode, useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 import { sanitizeAmount } from '../lib/format'
 
 export { sanitizeAmount }
-
 
 /**
  * Heliobond AmountInput — the heart of deposit & withdraw. Mono numerals, a
@@ -11,19 +11,37 @@ export { sanitizeAmount }
  * it explains, and offers max.
  */
 export interface AmountInputProps {
+  /** The current numeric input string value. Defaults to empty string. */
   value?: string
+  /** Callback fired when the user edits the input value. */
   onChange?: (value: string) => void
+  /** Currency code displayed beside the input (e.g. "USDC"). Defaults to "USDC". */
   currency?: string
+  /** Label for the user balance header display (e.g. "Wallet Balance"). */
   balanceLabel?: string
+  /** Current available balance string value. */
   balance?: string
+  /** Quick-select amount buttons (percentage or fixed values). Defaults to [25, 50, 100]. */
   chips?: number[]
+  /** Maximum allowed liquidity cap limit value. */
   cap?: number
+  /** Minimum valid amount for the screen using this input. */
+  min?: number
+  /** Maximum transaction amount for the screen using this input. */
+  max?: number
+  /** Explanatory message displayed when input exceeds liquidity cap limit. */
   capMessage?: string
+  /** Custom label for the Max chip button. */
   maxChipLabel?: string
+  /** Action button text shown when cap limit is reached (e.g. "Set to max"). */
   capActionLabel?: string
+  /** Optional React component or element rendered as on-chain calculation preview. */
   preview?: ReactNode
+  /** Accessible label text for the field input. */
   label?: string
+  /** HTML `id` attribute for input binding. */
   id?: string
+  /** Custom inline style overrides. */
   style?: CSSProperties
 }
 
@@ -35,6 +53,8 @@ export function AmountInput({
   balance,
   chips = [25, 50, 100],
   cap,
+  min,
+  max,
   capMessage,
   maxChipLabel,
   capActionLabel,
@@ -58,6 +78,8 @@ export function AmountInput({
   const liveMsg = overCap && !wasOverCap ? (capMessage ?? '') : ''
 
   const set = (v: number) => onChange?.(String(v))
+  const formatBound = (bound: number) =>
+    new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(bound)
 
   return (
     <div style={{ position: 'relative', ...style }}>
@@ -113,6 +135,7 @@ export function AmountInput({
           pattern="[0-9.]*"
           placeholder="0.00"
           value={value}
+          aria-label={label || 'Investment amount'}
           onFocus={(e) => e.target.select()}
           onPaste={(e) => {
             e.preventDefault()
@@ -150,16 +173,23 @@ export function AmountInput({
         </span>
       </div>
 
-      <p
-        style={{
-          fontFamily: 'var(--font-body)',
-          fontSize: 'var(--type-caption)',
-          color: 'var(--ink-60)',
-          margin: '8px 0 0',
-        }}
-      >
-        Min 1 USDC — Max {cap ?? '—'} USDC
-      </p>
+      {(min != null || max != null) && (
+        <p
+          style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: 'var(--type-caption)',
+            color: 'var(--ink-60)',
+            margin: '8px 0 0',
+          }}
+        >
+          {[
+            min != null && `Min ${formatBound(min)} USDC`,
+            max != null && `Max ${formatBound(max)} USDC`,
+          ]
+            .filter(Boolean)
+            .join(' — ')}
+        </p>
+      )}
       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
         {chips.map((c) => (
           <button key={c} type="button" onClick={() => set(c)} style={chipStyle}>
@@ -272,3 +302,26 @@ const chipStyle: CSSProperties = {
   fontSize: 'var(--type-small)',
   color: 'var(--ink)',
 }
+
+AmountInput.propTypes = {
+  value: PropTypes.string,
+  onChange: PropTypes.func,
+  currency: PropTypes.string,
+  balanceLabel: PropTypes.string,
+  balance: PropTypes.string,
+  chips: PropTypes.arrayOf(PropTypes.number.isRequired),
+  cap: PropTypes.number,
+  min: PropTypes.number,
+  max: PropTypes.number,
+  capMessage: PropTypes.string,
+  maxChipLabel: PropTypes.string,
+  capActionLabel: PropTypes.string,
+  preview: PropTypes.node,
+  label: PropTypes.string,
+  id: PropTypes.string,
+  style: PropTypes.object,
+}
+
+/** Alias for AmountInput (#309) */
+export const InvestmentForm = AmountInput
+export type InvestmentFormProps = AmountInputProps

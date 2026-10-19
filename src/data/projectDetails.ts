@@ -32,6 +32,8 @@ export interface ProjectDetail {
   fundedAmount: number
   /** Stated funding goal. */
   fundingGoal: number
+  /** Historical bond price/yield observations, anchored by oracle updates. */
+  priceHistory: PricePoint[]
   /** A tasteful CSS gradient for the hero photo placeholder. */
   heroGradient: string
 }
@@ -39,6 +41,13 @@ export interface ProjectDetail {
 export interface ScorePoint {
   date: string
   value: number
+  hash: string
+}
+/** A bond price/yield observation, anchored by an oracle update. */
+export interface PricePoint {
+  date: string
+  price: number
+  yield: number
   hash: string
 }
 
@@ -68,17 +77,35 @@ export const PROJECT_DETAILS: Record<number, ProjectDetail> = {
       ],
     },
     fundingTimeline: [
-      { date: '12 Jan 2026', label: 'Funded from the pool', amount: '$180,000', hash: '7c1e…b8f5' },
+      {
+        date: '12 Jan 2026',
+        label: 'Funded from the pool',
+        amount: '$180,000',
+        hash: '7c1edffa15e48934293d4b3aa779756a090d6ca6747d48b174d388eb830ab8f5',
+      },
       {
         date: '04 Mar 2026',
         label: 'Milestone draw released',
         amount: '$140,000',
-        hash: '9a2d…1e07',
+        hash: '9a2d46950ca79a39081c102f25bb2f3beedd80250d7afab8bc88b27dc9eb1e07',
       },
-      { date: '21 May 2026', label: 'Funded from the pool', amount: '$100,000', hash: 'a91f…3c0d' },
+      {
+        date: '21 May 2026',
+        label: 'Funded from the pool',
+        amount: '$100,000',
+        hash: 'a91f2301b7477eeae79c468b2c1d0ee7f3b617ea5bf0dc51524da4d5e0513c0d',
+      },
     ],
     fundedAmount: 420000,
     fundingGoal: 600000,
+    priceHistory: [
+      { date: 'Jan 2026', price: 96.4, yield: 7.4, hash: 'b41a…09c7' },
+      { date: 'Feb 2026', price: 97.1, yield: 7.3, hash: 'c5e8…2d14' },
+      { date: 'Mar 2026', price: 98.0, yield: 7.2, hash: 'e9f2…6a8b' },
+      { date: 'Apr 2026', price: 98.6, yield: 7.1, hash: '12d4…7c0e' },
+      { date: 'May 2026', price: 99.4, yield: 7.0, hash: '7a3c…b1f9' },
+      { date: 'Jun 2026', price: 100.2, yield: 6.9, hash: 'd44b…77a2' },
+    ],
     heroGradient:
       'radial-gradient(120% 120% at 72% 8%, var(--solar-24), transparent 60%), linear-gradient(150deg, var(--solar-12), var(--ink-06))',
   },
@@ -107,23 +134,41 @@ export const PROJECT_DETAILS: Record<number, ProjectDetail> = {
       ],
     },
     fundingTimeline: [
-      { date: '08 Dec 2025', label: 'Funded from the pool', amount: '$520,000', hash: '1f3a…c90b' },
+      {
+        date: '08 Dec 2025',
+        label: 'Funded from the pool',
+        amount: '$520,000',
+        hash: '1f3a4306b41030007948087ee9380bf9571eedbf5a289cb5cef3b372cb3bc90b',
+      },
       {
         date: '19 Feb 2026',
         label: 'Turbine expansion funded',
         amount: '$360,000',
-        hash: 'bd72…4e15',
+        hash: 'bd727b1245d60ba834952d9f0304e9b8e98c403549636d029ef5afe1a9e84e15',
       },
       {
         date: '02 Apr 2026',
         label: 'Milestone draw released',
         amount: '$200,000',
-        hash: '7e90…a3c1',
+        hash: '7e902c3f8e24ef57e29dd3ea957d895821dd326b82b48da8f66775ae4d1ba3c1',
       },
-      { date: '27 May 2026', label: 'Funded from the pool', amount: '$100,000', hash: '04cd…62f8' },
+      {
+        date: '27 May 2026',
+        label: 'Funded from the pool',
+        amount: '$100,000',
+        hash: '04cd7c81bea7ab2c03a07ab64e424dfce6464e6b6354e98eb25d8544242c62f8',
+      },
     ],
     fundedAmount: 1180000,
     fundingGoal: 1500000,
+    priceHistory: [
+      { date: 'Jan 2026', price: 95.2, yield: 7.1, hash: '5d0a…77b3' },
+      { date: 'Feb 2026', price: 96.0, yield: 7.0, hash: 'e213…9c4f' },
+      { date: 'Mar 2026', price: 96.8, yield: 6.9, hash: 'aa90…1d6e' },
+      { date: 'Apr 2026', price: 97.4, yield: 6.8, hash: '4c7b…83a1' },
+      { date: 'May 2026', price: 98.1, yield: 6.7, hash: 'f0e8…22d9' },
+      { date: 'Jun 2026', price: 98.9, yield: 6.6, hash: '6b1c…0fa4' },
+    ],
     heroGradient:
       'radial-gradient(130% 110% at 24% 12%, var(--solar-12), transparent 58%), linear-gradient(165deg, var(--ink-06), var(--solar-12))',
   },
@@ -152,17 +197,35 @@ export const PROJECT_DETAILS: Record<number, ProjectDetail> = {
       ],
     },
     fundingTimeline: [
-      { date: '15 Jan 2026', label: 'Funded from the pool', amount: '$300,000', hash: '6a2f…d18c' },
+      {
+        date: '15 Jan 2026',
+        label: 'Funded from the pool',
+        amount: '$300,000',
+        hash: '6a2f28062ac4338493eac103a370a4d91b4ade01b3855bf455c2c802a003d18c',
+      },
       {
         date: '10 Mar 2026',
         label: 'Irrigation milestone funded',
         amount: '$220,000',
-        hash: 'f471…9b05',
+        hash: 'f471651a42bc48ff0c9e399e949ded96cd25c73962ff4aeba1a4794d5a989b05',
       },
-      { date: '30 Apr 2026', label: 'Funded from the pool', amount: '$120,000', hash: '0e93…a6d2' },
+      {
+        date: '30 Apr 2026',
+        label: 'Funded from the pool',
+        amount: '$120,000',
+        hash: '0e93af9e130cba4276464e807c34a22babbca0e1a73982a323041a4d38daa6d2',
+      },
     ],
     fundedAmount: 640000,
     fundingGoal: 800000,
+    priceHistory: [
+      { date: 'Jan 2026', price: 99.4, yield: 5.9, hash: '9c01…b4a7' },
+      { date: 'Feb 2026', price: 100.1, yield: 5.8, hash: 'e7d3…109f' },
+      { date: 'Mar 2026', price: 100.8, yield: 5.7, hash: '44ab…7c2e' },
+      { date: 'Apr 2026', price: 101.3, yield: 5.6, hash: '1d90…f83b' },
+      { date: 'May 2026', price: 102.0, yield: 5.5, hash: 'b62c…05d1' },
+      { date: 'Jun 2026', price: 102.7, yield: 5.4, hash: '7fa0…3e9c' },
+    ],
     heroGradient:
       'radial-gradient(120% 130% at 78% 6%, var(--solar-24), transparent 62%), linear-gradient(140deg, var(--solar-12), var(--ink-06))',
   },
@@ -191,18 +254,41 @@ export const PROJECT_DETAILS: Record<number, ProjectDetail> = {
       ],
     },
     fundingTimeline: [
-      { date: '20 Dec 2025', label: 'Funded from the pool', amount: '$440,000', hash: '2a3f…1b9c' },
-      { date: '14 Feb 2026', label: 'Third turbine funded', amount: '$300,000', hash: 'cd92…7e05' },
+      {
+        date: '20 Dec 2025',
+        label: 'Funded from the pool',
+        amount: '$440,000',
+        hash: '2a3f41f6ebeb9cba829eb126971759abc785a7a37702a37ca45a06f8268e1b9c',
+      },
+      {
+        date: '14 Feb 2026',
+        label: 'Third turbine funded',
+        amount: '$300,000',
+        hash: 'cd92de88f20296eaa1170a98ee81c2259aea39fd5556fe11cbe43bff96ed7e05',
+      },
       {
         date: '06 Apr 2026',
         label: 'Milestone draw released',
         amount: '$140,000',
-        hash: '7f10…a2d8',
+        hash: '7f10babbc5aca9419e45bac6397cfcad1cfe1e2e407de1a64458e226f48da2d8',
       },
-      { date: '22 May 2026', label: 'Funded from the pool', amount: '$80,000', hash: '0b4d…63e1' },
+      {
+        date: '22 May 2026',
+        label: 'Funded from the pool',
+        amount: '$80,000',
+        hash: '0b4d3d831646d0bcc1cde654cba3701f1b75a74349f3148ce90e9378a49663e1',
+      },
     ],
     fundedAmount: 960000,
     fundingGoal: 1200000,
+    priceHistory: [
+      { date: 'Jan 2026', price: 101.5, yield: 5.2, hash: 'aa01…47cf' },
+      { date: 'Feb 2026', price: 102.2, yield: 5.1, hash: 'd193…6b28' },
+      { date: 'Mar 2026', price: 102.9, yield: 5.0, hash: '3c7e…0f91' },
+      { date: 'Apr 2026', price: 103.6, yield: 4.9, hash: '92ab…d340' },
+      { date: 'May 2026', price: 104.2, yield: 4.8, hash: 'cf05…1a6d' },
+      { date: 'Jun 2026', price: 105.0, yield: 4.7, hash: '7b2c…e904' },
+    ],
     heroGradient:
       'radial-gradient(125% 115% at 20% 10%, var(--solar-12), transparent 56%), linear-gradient(170deg, var(--ink-06), var(--solar-12))',
   },
@@ -231,17 +317,35 @@ export const PROJECT_DETAILS: Record<number, ProjectDetail> = {
       ],
     },
     fundingTimeline: [
-      { date: '28 Jan 2026', label: 'Funded from the pool', amount: '$140,000', hash: '5b2f…c81c' },
+      {
+        date: '28 Jan 2026',
+        label: 'Funded from the pool',
+        amount: '$140,000',
+        hash: '5b2f3ddef1775e55efa45ce0533164f93384e411ff9be5913016decb5625c81c',
+      },
       {
         date: '18 Mar 2026',
         label: 'Powerhouse milestone funded',
         amount: '$110,000',
-        hash: 'f981…4b05',
+        hash: 'f981423877cd1ce9c27e4b76c9a9dbf8d0f48526cc21e3d975f31dd5dbef4b05',
       },
-      { date: '11 May 2026', label: 'Funded from the pool', amount: '$60,000', hash: '0a73…e6d2' },
+      {
+        date: '11 May 2026',
+        label: 'Funded from the pool',
+        amount: '$60,000',
+        hash: '0a73e6e20773ead3b02008f91f8df4b1e63169553b7f9b6a0f43c1c06359e6d2',
+      },
     ],
     fundedAmount: 310000,
     fundingGoal: 400000,
+    priceHistory: [
+      { date: 'Jan 2026', price: 94.0, yield: 8.1, hash: '4d0a…91b7' },
+      { date: 'Feb 2026', price: 94.8, yield: 8.0, hash: 'e913…7c4f' },
+      { date: 'Mar 2026', price: 95.6, yield: 7.9, hash: 'aa70…2d6e' },
+      { date: 'Apr 2026', price: 96.3, yield: 7.8, hash: '1c8b…43a1' },
+      { date: 'May 2026', price: 97.0, yield: 7.7, hash: 'f2e8…02d9' },
+      { date: 'Jun 2026', price: 97.8, yield: 7.6, hash: '6d1c…b0a4' },
+    ],
     heroGradient:
       'radial-gradient(130% 120% at 74% 10%, var(--solar-12), transparent 60%), linear-gradient(155deg, var(--solar-12), var(--ink-06))',
   },
@@ -270,17 +374,35 @@ export const PROJECT_DETAILS: Record<number, ProjectDetail> = {
       ],
     },
     fundingTimeline: [
-      { date: '05 Jan 2026', label: 'Funded from the pool', amount: '$240,000', hash: '3c2f…b18c' },
+      {
+        date: '05 Jan 2026',
+        label: 'Funded from the pool',
+        amount: '$240,000',
+        hash: '3c2fb21ec07c807799464c4c6cecf868bbeacb102c2a485d60f9ddce1192b18c',
+      },
       {
         date: '02 Mar 2026',
         label: 'Second cluster funded',
         amount: '$180,000',
-        hash: 'f271…6b05',
+        hash: 'f271575a1a932fe32c79fa49efaf4549b5227ab3975bdd43be780d17f1246b05',
       },
-      { date: '25 Apr 2026', label: 'Funded from the pool', amount: '$100,000', hash: '0c93…46d2' },
+      {
+        date: '25 Apr 2026',
+        label: 'Funded from the pool',
+        amount: '$100,000',
+        hash: '0c932351bedef01859f63bbe1b3debdf7edd0de59fbdcdeedcad9afe5f9346d2',
+      },
     ],
     fundedAmount: 520000,
     fundingGoal: 700000,
+    priceHistory: [
+      { date: 'Jan 2026', price: 95.8, yield: 6.8, hash: '8c01…54a7' },
+      { date: 'Feb 2026', price: 96.5, yield: 6.7, hash: 'e2d3…30f9' },
+      { date: 'Mar 2026', price: 97.2, yield: 6.6, hash: '41ab…9c2e' },
+      { date: 'Apr 2026', price: 97.9, yield: 6.5, hash: '1f90…283b' },
+      { date: 'May 2026', price: 98.6, yield: 6.4, hash: 'b32c…75d1' },
+      { date: 'Jun 2026', price: 99.3, yield: 6.3, hash: '7da0…6e9c' },
+    ],
     heroGradient:
       'radial-gradient(120% 125% at 76% 8%, var(--solar-24), transparent 60%), linear-gradient(145deg, var(--solar-12), var(--ink-06))',
   },

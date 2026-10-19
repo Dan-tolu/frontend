@@ -3,9 +3,11 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { useTranslations } from 'next-intl'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { ProjectCard, Tag, WatchlistButton } from '../components'
-import { HB_DATA, type Project, type ProjectType } from '../data'
+import { ProjectCard, Tag, WatchlistButton, DemoDataBadge } from '../components'
+import { type Project, type ProjectType } from '../data'
+import { selectProjects } from '../state/selectors'
 import { getProjectsPaginated } from '../lib/api'
+import { searchBondsByName } from '../lib/bondUtils'
 
 /**
  * Explore — a living atlas, not a shop. Grid of all registered projects with
@@ -13,6 +15,8 @@ import { getProjectsPaginated } from '../lib/api'
  */
 export interface ExploreProps {
   onOpen: (project: Project) => void
+  initialProjects?: Project[]
+  initialTotal?: number
 }
 
 const TYPES: (ProjectType | 'All')[] = ['All', 'Solar', 'Wind', 'Hydro']
@@ -24,12 +28,12 @@ const TYPES: (ProjectType | 'All')[] = ['All', 'Solar', 'Wind', 'Hydro']
  */
 const PAGE_SIZE = 12
 
-export function Explore({ onOpen }: ExploreProps) {
+export function Explore({ onOpen, initialProjects }: ExploreProps) {
   const t = useTranslations('Explore')
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
+  const [projects, setProjects] = useState<Project[]>(initialProjects ?? [])
+  const [loading, setLoading] = useState(!initialProjects || initialProjects.length === 0)
   const [apiError, setApiError] = useState(false)
   const urlType = searchParams.get('type') as ProjectType | null
   const [filter, setFilter] = useState<ProjectType | 'All'>(
@@ -38,16 +42,19 @@ export function Explore({ onOpen }: ExploreProps) {
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
+    if (initialProjects && initialProjects.length > 0) {
+      return
+    }
     getProjectsPaginated(1, 50)
       .then((res) => {
         setProjects(res.projects)
       })
       .catch(() => {
-        setProjects(HB_DATA.projects.slice(0, 50))
+        setProjects(selectProjects().slice(0, 50))
         setApiError(true)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [initialProjects])
 
   const setFilterAndUrl = (next: ProjectType | 'All') => {
     setFilter(next)
@@ -59,11 +66,8 @@ export function Explore({ onOpen }: ExploreProps) {
     }
   }
 
-  const query = searchTerm.trim().toLowerCase()
   const filteredByType = filter === 'All' ? projects : projects.filter((p) => p.type === filter)
-  const shown = filteredByType.filter((p) =>
-    p.name.toLowerCase().includes(query) || p.location.toLowerCase().includes(query),
-  )
+  const shown = searchBondsByName(filteredByType, searchTerm)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const paged = shown.slice(0, visibleCount)
   const remaining = shown.length - visibleCount
@@ -75,6 +79,7 @@ export function Explore({ onOpen }: ExploreProps) {
 
   return (
     <main id="main-content" style={{ maxWidth: 1320, margin: '0 auto', padding: '48px 32px 80px' }}>
+      <DemoDataBadge style={{ marginBottom: 16 }} />
       <style>{`
         .hb-projects-grid > * {
           min-width: 0;

@@ -1,5 +1,5 @@
 /**
- * useDepositXard - idempotent deposit retry protection (Issue #433).
+ * useDepositGuard - idempotent deposit retry protection (Issue #433).
  *
  * When a user submits a deposit and the network times out or they cancel,
  * the transaction may still be processing server-side. Submitting again
@@ -12,7 +12,7 @@
  * sessionStorage is used (not localStorage) so the guard is scoped to the
  * current browser tab - a deliberate wallet session - and clears automatically
  * when the tab is closed.
-*/
+ */
 
 import { useCallback } from 'react'
 
@@ -20,15 +20,6 @@ const STORAGE_KEY = 'hb_pending_deposit'
 
 /** Maximum age (ms) for a pending deposit record to be considered active. */
 const PENDING_TTL_MS = 5 * 60 * 1000 // 5 minutes
-
-/**
- * Deposit amount limits (USDC).
- * These constants centralize the numeric limits used by the deposit flow.
- * TODO: Move to a shared config module if these are used outside this hook.
- */
-export const MIN_DEPOSIT_AMOUNT = 2000
-export const DEFAULT_DEPOSIT_AMOUNT = 5000
-export const MAX_DEPOSIT_AMOUNT = 10000
 
 export interface PendingDeposit {
   /** USDC amount of the in-flight deposit. */
@@ -39,7 +30,7 @@ export interface PendingDeposit {
   address: string
 }
 
-export function useDepositGard() {
+export function useDepositGuard() {
   /**
    * Mark a deposit as in-flight. Call this immediately before calling
    * `SubmitDeposit` so that any subsequent render (e.g. after abort/timeout)
@@ -78,7 +69,7 @@ export function useDepositGard() {
       const record = JSON.parse(raw) as PendingDeposit
       if (Date.now() - record.startedAt > PENDING_TTL_MS) {
         // Expired - clean up and treat as no pending record
-        sessionStorage.removeItem(STORAGE_KEY
+        sessionStorage.removeItem(STORAGE_KEY)
         return null
       }
       return record

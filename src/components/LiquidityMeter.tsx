@@ -1,4 +1,5 @@
 import { type CSSProperties } from 'react'
+import PropTypes from 'prop-types'
 import { formatMoney } from '@/lib/format'
 
 /**
@@ -7,10 +8,15 @@ import { formatMoney } from '@/lib/format'
  * with the "Available to withdraw now" figure permanently legible.
  */
 export interface LiquidityMeterProps {
+  /** The liquid/available amount currently in the vault for immediate withdrawal. Defaults to 0. */
   liquid?: number
+  /** The total vault value (liquid + locked in active projects). Defaults to 0. */
   total?: number
+  /** Currency symbol prefix (e.g. "$"). Defaults to "$". */
   currency?: string
+  /** Whether to show the explanatory text detailing immediate liquidity vs active project allocation. Defaults to true. */
   showExplanation?: boolean
+  /** Custom inline style overrides. */
   style?: CSSProperties
 }
 
@@ -94,4 +100,12 @@ export function LiquidityMeter({
       )}
     </div>
   )
+}
+
+LiquidityMeter.propTypes = {
+  liquid: PropTypes.number,
+  total: PropTypes.number,
+  currency: PropTypes.string,
+  showExplanation: PropTypes.bool,
+  style: PropTypes.object,
 }

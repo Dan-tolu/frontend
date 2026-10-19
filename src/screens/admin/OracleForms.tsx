@@ -20,8 +20,23 @@ import {
   panelBodyStyle,
 } from '@/theme'
 import { type RegistryEntry } from '@/data/admin'
-import { clampScore, validateScores } from './utils'
+import { clampScore, validateScores, isSafeScore } from './utils'
 import { formatMoney, parseAmount } from '@/lib/format'
+
+export { isSafeScore }
+
+export function isSafeAmount(value: string, liquidOrMax: number): boolean {
+  if (!/^\d*\.?\d+$/.test(value)) return false
+  const n = parseAmount(value)
+  return Number.isFinite(n) && n > 0 && n <= liquidOrMax
+}
+
+export interface FundingGuardrails {
+  insuranceReserve?: number
+  investmentCapacities?: Record<number, number>
+  maxTransactionAmount?: number
+  isRegistryPaused?: boolean
+}
 
 /**
  * OracleForms — the two privileged write paths, side by side:
@@ -34,11 +49,18 @@ import { formatMoney, parseAmount } from '@/lib/format'
 export interface OracleFormsProps {
   projects: RegistryEntry[]
   liquid: number
+  guardrails?: FundingGuardrails
   onPushScores: (id: number, credit: number, green: number) => void
   onFund: (id: number, amount: number) => void
 }
 
-export function OracleForms({ projects, liquid, onPushScores, onFund }: OracleFormsProps) {
+export function OracleForms({
+  projects,
+  liquid,
+  guardrails,
+  onPushScores,
+  onFund,
+}: OracleFormsProps) {
   const t = useTranslations('Admin')
   const first = projects[0]?.id ?? 0
 
@@ -51,11 +73,18 @@ export function OracleForms({ projects, liquid, onPushScores, onFund }: OracleFo
   const [fundId, setFundId] = useState(first)
   const [amount, setAmount] = useState('')
 
-  const scoresValid = validateScores(credit, green)
+  const scoresValid = isSafeScore(credit) && isSafeScore(green) && validateScores(credit, green)
+
+  const isPaused = guardrails?.isRegistryPaused ?? false
+  const reserve = guardrails?.insuranceReserve ?? 0
+  const afterReserve = Math.max(0, liquid - reserve)
+  const capacity = guardrails?.investmentCapacities?.[fundId] ?? Infinity
+  const maxTx = guardrails?.maxTransactionAmount ?? Infinity
+  const deployable = isPaused ? 0 : Math.max(0, Math.min(afterReserve, capacity, maxTx))
 
   const amountN = parseAmount(amount)
-  const fundValid = amountN > 0 && amountN <= liquid
-  const overLiquid = amountN > liquid
+  const fundValid = !isPaused && isSafeAmount(amount, deployable)
+  const overLiquid = amountN > deployable
 
   const target = projects.find((p) => p.id === scoreId)
 
@@ -147,21 +176,40 @@ export function OracleForms({ projects, liquid, onPushScores, onFund }: OracleFo
             />
             <span style={dataCaptionStyle}>USDC</span>
           </div>
-          {overLiquid && (
+          {isPaused && (
             <div role="status" style={warningBoxStyle}>
-              <p style={warningTextStyle}>{t('fundExceeds')}</p>
+              <p style={warningTextStyle}>
+                Registry is currently paused. Project funding is disabled.
+              </p>
+            </div>
+          )}
+          {!isPaused && overLiquid && (
+            <div role="status" style={warningBoxStyle}>
+              <p style={warningTextStyle}>
+                {amountN > afterReserve && reserve > 0
+                  ? `Amount exceeds deployable balance after insurance reserve of $${formatMoney(reserve)}`
+                  : amountN > capacity
+                    ? `Amount exceeds remaining capacity for this project ($${formatMoney(capacity)})`
+                    : t('fundExceeds')}
+              </p>
             </div>
           )}
         </Field>
         <p style={helpText}>
-          {t('liquidHint')} <span style={moneyStyle}>${formatMoney(liquid)}</span>.{' '}
-          {amountN > liquid ? t('fundExceeds') : t('fundOk')}
+          {t('liquidHint')} <span style={moneyStyle}>${formatMoney(deployable)}</span>.{' '}
+          {overLiquid ? t('fundExceeds') : t('fundOk')}
         </p>
         <Button
           size="sm"
           variant="primary"
           disabled={!fundValid}
-          reason={amountN > liquid ? t('fundReasonExceeds') : t('fundReasonEmpty')}
+          reason={
+            isPaused
+              ? 'Registry is paused'
+              : overLiquid
+                ? 'Amount exceeds deployable limit'
+                : t('fundReasonEmpty')
+          }
           onClick={submitFund}
         >
           {t('submitFund')}
@@ -243,4 +291,3 @@ function NumberInput({
     />
   )
 }
-

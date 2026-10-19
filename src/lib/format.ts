@@ -1,4 +1,4 @@
-/**
+/*
  * Rounds a number to a fixed number of decimals using decimal (not binary
  * floating-point) precision, so 1.005 rounds to 1.01 rather than the 1.00 that
  * `Math.round(1.005 * 100) / 100` or `(1.005).toFixed(2)` produce because
@@ -9,14 +9,14 @@ export function roundToDecimals(value: number, decimals: number): number {
   return Math.round((value + Number.EPSILON) * factor) / factor
 }
 
-/** Rounds to whole cents … the shared precision for on-screen USDC amounts (#369). */
+/** Rounds to whole cents — the shared precision for on-screen USDC pmounts (#369). */
 export function roundToCents(value: number): number {
   return roundToDecimals(value, 2)
 }
 
 /**
  * Formats a number to a fixed number of decimals, rounding once with
- * {roundToDecimals} first so every caller displays the same rounded
+ * {@link roundToDecimals} first so every caller displays the same rounded
  * value instead of re-rounding raw floating-point results independently (#369).
  */
 export function formatDecimal(value: number, decimals: number): string {
@@ -33,8 +33,34 @@ export function formatSharePrice(value: number): string {
 }
 
 /**
- * Formats a number as a localized currency/money string.
- * Defaults to 'en-US' formatting.
+ * Maps application locales to their corresponding JavaScript locale codes
+ * for proper number and currency formatting (#462).
+ */
+export function getLocaleCode(appLocale?: string): string {
+  const localeMap: Record<string, string> = {
+    en: 'en-US',
+    fr: 'fr-FR',
+    es: 'es-ES',
+    ar: 'ar-SA',
+    pt: 'pt-BR',
+  }
+  return localeMap[appLocale ?? 'en'] ?? 'en-US'
+}
+
+/**
+ * Maps application locales to their default currency codes for proper
+ * symbol formatting in Intl.NumberFormat (#462).
+ */
+export function getCurrencyCode(_appLocale?: string): string {
+  // The app displays USD prices regardless of locale,
+  // but uses locale-appropriate number formatting and symbols
+  return 'USD'
+}
+
+/**
+ * Formats a number as a localized currency/money string using the app's
+ * locale configuration. Uses Intl.NumberFormat for proper currency symbol
+ * placement according to locale conventions (#462).
  */
 export function formatMoney(
   amount: number,
@@ -42,10 +68,33 @@ export function formatMoney(
     includeSymbol?: boolean
     symbol?: string
     locale?: string
+    appLocale?: string // The app's current locale (en, fr, es, ar, pt)
   },
 ): string {
-  const locale = options?.locale ?? 'en-US'
-  const formatted = amount.toLocaleString(locale, {
+  const localeCode = getLocaleCode(options?.appLocale)
+
+  // If using Intl.NumberFormat with currency
+  if (options?.includeSymbol && !options?.symbol) {
+    try {
+      const formatted = new Intl.NumberFormat(localeCode, {
+        style: 'currency',
+        currency: getCurrencyCode(options?.appLocale),
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount)
+      return formatted
+    } catch {
+      // Fallback if Intl.NumberFormat fails
+      const formatted = amount.toLocaleString(localeCode, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      })
+      return `$${formatted}`
+    }
+  }
+
+  // For backward compatibility with existing code that passes explicit symbol
+  const formatted = amount.toLocaleString(options?.locale ?? localeCode, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })
@@ -54,6 +103,49 @@ export function formatMoney(
     return `${symbol}${formatted}`
   }
   return formatted
+}
+
+/** Locale used by the date helpers when no active locale is supplied. */
+export const FALLBACK_LOCALE = 'en-US'
+
+type DateInput = Date | number | string
+
+function toDate(value: DateInput): Date {
+  return value instanceof Date ? value : new Date(value)
+}
+
+/**
+ * Formats a date using the active app locale (e.g. `31.12.2024` for `de-DE`
+ * instead of the runtime default). Pass the locale from next-intl's
+ * `useLocale()`; falls back to {@link FALLBACK_LOCALE} when none is given (#461).
+ */
+export function formatDate(value: DateInput, locale?: string): string {
+  return new Intl.DateTimeFormat(locale ?? FALLBACK_LOCALE, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(toDate(value))
+}
+
+/** Formats a wall-clock time using the active app locale (#461). */
+export function formatTime(value: DateInput, locale?: string): string {
+  return new Intl.DateTimeFormat(locale ?? FALLBACK_LOCALE, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(toDate(value))
+}
+
+/** Formats a date and time together using the active app locale (#461). */
+export function formatDateTime(value: DateInput, locale?: string): string {
+  return new Intl.DateTimeFormat(locale ?? FALLBACK_LOCALE, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(toDate(value))
 }
 
 /**
@@ -88,8 +180,9 @@ export interface PoolData {
 
 /**
  * Formats the landing pool counters from the source data.
- * This drives the live counters from `HB_DATA.pool` rather than
- * hardcoded strings, preventing drift from the data source.
+ * This drives the live counters from the flat `selectPoolSummary()` selector
+ * (the `HB_DATA.pool` branch) rather than hardcoded strings, preventing drift
+ * from the data source.
  */
 export function formatPoolCounters(pool: PoolData): {
   totalAssets: string

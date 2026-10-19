@@ -1,13 +1,10 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { Button, StatBlock } from '../components'
-import { HB_DATA, formatCurrency, formatNumber } from '../data'
-
-const LiveHelio = dynamic(() => import('../brand/LiveHelio').then((m) => m.LiveHelio), {
-  ssr: false,
-})
+import { formatCurrency, formatNumber } from '../data'
+import { selectPoolSummary } from '../state/selectors'
+import { LiveHelio } from '../brand/LiveHelio'
 
 /**
  * Landing — public hero. The live Helio dominates; three counters deep-link to
@@ -20,9 +17,9 @@ export interface LandingProps {
 
 export function Landing({ onConnect, onExplore }: LandingProps) {
   const t = useTranslations('Landing')
-  const d = HB_DATA
+  const pool = selectPoolSummary()
   const steps = [1, 2, 3, 4] as const
-  const intensity = Math.min(1, d.pool.totalAssets / 6_000_000)
+  const intensity = Math.min(1, pool.totalAssets / 6_000_000)
 
   return (
     <main id="main-content">
@@ -72,7 +69,7 @@ export function Landing({ onConnect, onExplore }: LandingProps) {
         </div>
 
         <div className="hb-hero-helio" style={{ display: 'flex', justifyContent: 'center' }}>
-          <LiveHelio size={380} motes={d.pool.projectsFunded} intensity={intensity} />
+          <LiveHelio size={380} motes={pool.projectsFunded} intensity={intensity} />
         </div>
       </section>
 
@@ -88,21 +85,22 @@ export function Landing({ onConnect, onExplore }: LandingProps) {
           }}
         >
           <div style={counterCell}>
-            <StatBlock
-              label={t('poolValue')}
-              value={formatCurrency(d.pool.totalAssets)}
-              size="lg"
-            />
+            <StatBlock label={t('poolValue')} value={formatCurrency(pool.totalAssets)} size="lg" />
           </div>
           <div style={counterCell}>
             <StatBlock
               label={t('projectsFunded')}
-              value={formatNumber(d.pool.projectsFunded)}
+              value={formatNumber(pool.projectsFunded)}
               size="lg"
             />
           </div>
           <div style={counterCell}>
-            <StatBlock label={t('returnRate')} value={formatNumber(d.pool.returnRate)} unit="%" size="lg" />
+            <StatBlock
+              label={t('returnRate')}
+              value={formatNumber(pool.projectedRate)}
+              unit="%"
+              size="lg"
+            />
           </div>
         </div>
         <p

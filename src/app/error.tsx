@@ -1,11 +1,31 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Helio } from '../brand/Helio'
+import { reportError } from '../lib/errorReporting'
+import { useHorizonHealth } from '../hooks/useHorizonHealth'
+
+/** `navigator.onLine`, read through the browser's `online`/`offline` events. */
+function subscribeBrowserOnline(onChange: () => void) {
+  window.addEventListener('online', onChange)
+  window.addEventListener('offline', onChange)
+  return () => {
+    window.removeEventListener('online', onChange)
+    window.removeEventListener('offline', onChange)
+  }
+}
+
+function getBrowserOnline() {
+  return typeof navigator === 'undefined' ? true : navigator.onLine
+}
+
+function useBrowserOnline() {
+  return useSyncExternalStore(subscribeBrowserOnline, getBrowserOnline, () => true)
+}
 
 /**
- * App-level error boundary -- runtime errors in any route segment bubble here
+ * App-level error boundary - runtime errors in any route segment bubble here
  * instead of the framework default crash screen.
  *
  * Must be a Client Component (Next.js requirement for error.tsx).
@@ -18,14 +38,20 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  const isOffline = useMemo(
-    () => /stellar|offline|network|connection|sync/i.test(error.message ?? ''),
-    [error.message]
-  )
+  // Offline is a connectivity fact, not a guess from the message text. The
+  // Horizon poller tracks reachability; `navigator.onLine` covers a hard drop
+  // before the poller notices. Generic production error messages ("An error
+  // occurred") no longer get mislabelled as a Stellar outage.
+  const { isOnline } = useHorizonHealth()
+  const browserOnline = useBrowserOnline()
+  const isOffline = !isOnline || !browserOnline
 
   useEffect(() => {
-    // In production wire this to your error-reporting service (e.g. Sentry).
     console.error('[Heliobond] unhandled error:', error)
+    reportError(error, {
+      kind: 'route',
+      context: error.digest ? { digest: error.digest } : undefined,
+    })
   }, [error])
 
   return (
@@ -42,7 +68,7 @@ export default function GlobalError({
       }}
     >
       <div aria-hidden="true" style={{ marginBottom: 32, opacity: 0.75 }}>
-        <Helio size={160} motes={3} breathe={false} />
+        <Helio size={64} motes={12} breathe={false} />
       </div>
 
       <p
@@ -55,7 +81,7 @@ export default function GlobalError({
           textTransform: 'uppercase',
         }}
       >
-        {isOffline ? "You're offline" : "Something went wrong"}
+        {isOffline ? "You're offline" : 'Something went wrong'}
       </p>
 
       <h1
@@ -84,7 +110,7 @@ export default function GlobalError({
       >
         {isOffline
           ? "The app couldn't reach the Stellar node. Check your connection or try again. You can still access cached views."
-          : "The application hit an unexpected problem. You can try recovering, or go back to the home page."}
+          : 'The application hit an unexpected problem. You can try recovering, or go back to the home page.'}
       </p>
 
       {error.digest && (
@@ -146,7 +172,7 @@ export default function GlobalError({
             transition: 'background var(--dur-press) var(--ease-out)',
           }}
         >
-          {isOffline ? 'View cached views' : 'Go home'}
+          Go home
         </Link>
       </div>
     </main>

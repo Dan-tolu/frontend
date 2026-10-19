@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, type CSSProperties } from 'react'
 import { CheckIcon, CopyIcon, ExternalIcon } from './icons'
 import { useTranslations } from 'next-intl'
 import { useToast } from './Toast'
+import { getExplorerUrl } from '../config/network'
 
 /**
  * Heliobond AddressChip — a Stellar address or tx hash, truncated in the
@@ -11,11 +12,17 @@ import { useToast } from './Toast'
  * Embodies "every figure traces to chain in <= 2 taps".
  */
 export interface AddressChipProps {
+  /** Full Stellar address or transaction hash string to display and copy. */
   value: string
+  /** Number of leading characters to keep visible before the middle ellipsis. Defaults to 6. */
   lead?: number
+  /** Number of trailing characters to keep visible after the middle ellipsis. Defaults to 6. */
   tail?: number
+  /** Optional Stellar block explorer URL to open when clicking the external link icon. */
   explorerUrl?: string
+  /** Accessible label/type of item for the copy toast notification (e.g. 'address' or 'transaction'). Defaults to 'address'. */
   label?: string
+  /** Custom inline style overrides for the chip container. */
   style?: CSSProperties
 }
 
@@ -32,6 +39,7 @@ export function AddressChip({
   const [copied, setCopied] = useState(false)
   const [hover, setHover] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const finalExplorerUrl = explorerUrl ?? getExplorerUrl(value)
 
   useEffect(() => {
     return () => {
@@ -133,9 +141,9 @@ export function AddressChip({
       >
         {copied ? <CheckIcon style={{ color: 'var(--growth)' }} /> : <CopyIcon />}
       </button>
-      {explorerUrl && (
+      {finalExplorerUrl && (
         <a
-          href={explorerUrl}
+          href={finalExplorerUrl}
           target="_blank"
           rel="noreferrer"
           aria-label={t('viewOnExplorer', { label })}
